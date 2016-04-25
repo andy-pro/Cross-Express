@@ -1,0 +1,5 @@
+{
+  "port" : 3000,
+  "tokenLife" : 3600,
+  "db": "mongodb://localhost:8001/cross"
+}
