@@ -14,6 +14,10 @@ config.static = process.cwd() + '/public';
 // mongoose setup
 require( '../lib/mongoose' );
 
+// lexicon setup
+var lexicon = require('../lib/lexicon');
+lexicon.setup(require('../lexicon.json'));
+
 var app = require('../app');
 var debug = require('debug')('cross-express:server');
 var http = require('http');

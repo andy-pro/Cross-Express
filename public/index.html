@@ -1,48 +1,51 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Express</title>
-    <link href="/static/stylesheets/cross.css" rel="stylesheet">
     <link href="/static/stylesheets/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/stylesheets/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="/static/stylesheets/cross.css" rel="stylesheet">
   </head>
   <body>
 
     <div class="flash alert alert-dismissable">
       <span></span>
-      <button class="close" aria-hidden="true" type="button">×</button>
+      <button class="close" aria-hidden="true" type="button">&times;</button>
     </div>
 
     <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
       <div class="container-fluid">
         <div class="navbar-header">
-          <button class="navbar-toggle" data-target=".navbar-collapse" data-toggle="collapse" type="button">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
           <span class="sr-only">Toggle navigation</span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
           </button>
         </div>
+
         <div class="collapse navbar-collapse navbar-ex1-collapse">
+
           <ul class="nav navbar-nav">
-          <li>
-          <a class="navbar-brand web2spa" href="/cross/crosses">
-          <b>CROSS ™ </b>
-          </a>
-          </li>
-          <li>
-          <a class="nav navbar-nav web2spa" href="/cross/news">
-          <b>News</b>
-          </a>
-          </li>
-          <li>
-          <a class="inmenu">
-          <label>
-          <input id="chainMode" type="checkbox">
-          Edit chain
-          </label>
-          </a>
-          </li>
+            <li><a class="navbar-brand" href="/"><b>CROSS&trade;&nbsp;</b></a></li>
+            <li><a class="nav navbar-nav web2spa" href="/news"><b>News</b></a></li>
+            <li><a class="inmenu"><label><input id="chainMode" type="checkbox">Edit chain</label></a></li>
           </ul>
+
+          <ul class="nav navbar-nav navbar-right"><li id="authmenu" class="dropdown"></li></ul>
+
+
+          <form id="livesearch" class="navbar-form navbar-right">
+            <div class="input-group">
+              <input type="search" id="master-search" class="form-control input-inverse" placeholder="Search" value="" autocomplete="off" style="width:300px"/>
+              <span class="input-group-btn">
+                <button type="none" class="btn btn-inverse" title="Details"><i class="glyphicon glyphicon-search"></i>
+                <button id="viewfound" type="none" class="btn btn-inverse" title="View"><i class="glyphicon glyphicon-eye-open"></i>
+                <button id="editfound" type="none" class="btn btn-inverse" title="Editor"><i class="glyphicon glyphicon-edit"></i>
+              </span>
+            </div>
+            <div id="livesearchout"></div>
+          </form>
+
         </div>
       </div>
     </nav>
@@ -57,6 +60,26 @@
       </div>
     </footer>
     <div id="gif"></div>
+
+
+
+<div id="modal-container" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title"></h4>
+      </div>
+      <div id="modal-body" class="modal-body">
+
+      </div>
+        <!--<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>-->
+        <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+    </div>
+  </div>
+</div>
+
+
 
     <!--
 

@@ -12,7 +12,7 @@ const _DEBUG_ = false;
 //const _DEBUG_ = true;
 const _mypre = '<pre class="mypre">%s</pre>';
 
-//_ = web2spa;
+_ = web2spa;
 
 var app = {
 
@@ -115,7 +115,28 @@ var app = {
 			return v.replace(/(\d+)/g, function(s, m) { return (+m/1.03).toFixed(); });
 		});
 	},
-	db_clear: function() { if (confirm("A you sure?")) location.href = web2spa.root_path + 'cleardb'; }
+	db_clear: function() { if (confirm("A you sure?")) location.href = web2spa.root_path + 'cleardb'; },
+
+	auth_menu: function() {
+		var menu = $userId ?
+		  { header: 'Welcome', subitems: [ // login, logout, profile, change_password, register, request_reset_password
+				  { href: 'profile', icon: 'user', title: 'Profile' },
+				  { href: 'change_password', icon: 'lock', title: 'Password' },
+					{ divider: 1 },
+				  { href: 'logout', icon: 'off', title: 'Log Out' }
+			]}
+			:
+		  { header: 'Log In', subitems: [
+				  { href: 'register', icon: 'user', title: 'Sign Up' },
+				  { href: 'request_reset_password', icon: 'lock', title: 'Lost password?' },
+					{ divider: 1 },
+				  { href: 'login', icon: 'off', title: 'Log In' }
+			]};
+		menu.templateId = 'AuthMenuTmpl';
+		menu.targetEl = 'authmenu';
+		web2spa.render(menu);
+	}
+
 };
 
 $(function () {
@@ -134,8 +155,10 @@ $(function () {
 		post_back: true, // enable history.back() when forms are posted
 		esc_back: true, // enable history.back() when 'ESC' key pressed
 		selector: 'a:not(a[data-bypass])',
+		flyover_url: new RegExp('^\/user(?:$|\/\w*)'), // '/user', '/user/', '/user/...' not be pushed to history
 		//mega: true, // 'controller/function' model
 		set_title: true, // controller sets the document title
+
 		routes: [
 			['Crosses', {index:true}],
 			['Vertical'],
@@ -149,25 +172,32 @@ $(function () {
 			['EditFound', {login_req:true}],
 			['EditCables', {login_req:true}],
 			['Restore', {master: true, login_req:true}],	// url: 'cross/default/restore', because master=true
-			['User', {master: true, login_path:true}],  // url: 'cross/default/user' and this is login path pluralistically
+			//['User', {master: true, login_path:true}],  // url: 'cross/default/user' and this is login path pluralistically
+			['User'],
 			['Error', {error_path: true}]],
+
 		beforeStart: function () {   /* callback, perform after app load & init, but before start, application setup */
 			L = web2spa.lexicon.data;   // global shorthand to lexicon
 			tbheaders = [L._CROSS_, L._VERTICAL_, L._PLINT_, L._PAIR_];
 			L._BTNOKCNSL_ = web2spa._render({templateId:'btnOkCancelTmpl'});    // helpers, inline templates for common buttons
-			L.i_ok = '<i class="glyphicon glyphicon-ok">';
-			L.i_par = '<i class="glyphicon glyphicon-random">';
+			var icon = '<i class="glyphicon glyphicon-%s">';
+			L.i_ok = icon.format('ok');
+			L.i_par = icon.format('random');
 			app.A = '<a class="web2spa" href="' + web2spa.start_path; // <a> print helper
 			app.chainMode = new CheckBox('chainMode');
 			app.editMode = new CheckBox('editMode');
 			app.wrapMode = new CheckBox('wrapMode');
 			_DEBUG_ && web2spa.targetEl.before('<div id="debug" class="well"><button class="btn btn-default" onclick="vars_watch()">Watch</button><span id="varswatch"></span></div>');
+			app.auth_menu();
 		},
+
 		beforeNavigate: function() {
 			app.chainMode.reset_handler();
 		},
+
 		afterNavigate: function() {
 			_DEBUG_ && app.vars_watch();
 		}
+
 	});
 });

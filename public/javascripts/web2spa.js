@@ -26,13 +26,17 @@ var web2spa = {
         esc_back: enable history.back() when 'ESC' key pressed,
         routes: [ ['Route1', opts], ['Route2', opts], ... ], opts see in 'add_route'
         selector: this hyperlinks will be redirect to javascript calls instead url, 'a.web2spa' is default
+        flyover_url: RegExp, matched location urls will be not pushed to history
         beforeStart: callback perform before application start, but after application load & init
         beforeNavigate: callback perform before route choose
         afterNavigate: callback perform after controller execute
     */
     /*** Global vars & objects: ***/
     $scope = {}; // controller data
-    //$userId, $Admin - each ajax request set this vars
+    // each ajax request set this vars
+    $userId = 0;
+    $Admin = 0;
+    //
     $route = {};	// {title, url, templateId, controller, login_req, target, targetEl}
     $request = {};	/* keys:
         args:[], vars:{}, url, path, query:var1=value1&var2=value2..., (url=path/arg1/arg2/../argn+&+query),
@@ -67,6 +71,7 @@ var web2spa = {
     this.beforeNavigate = opts.beforeNavigate;
     this.afterNavigate = opts.afterNavigate;
     this.set_title = opts.set_title;
+    this.flyover_url = opts.flyover_url;
     if (opts.esc_back) document.onkeydown = function(e) {   // enable history.back() when 'ESC' key pressed
         if (e.keyCode == 27) { history.back(); return false; }  // escape key code check
     }
@@ -81,7 +86,15 @@ var web2spa = {
     $.when.apply($, promises).always(function() {
         $.each(opts.routes, function () { self.add_route(this); });
         /*** add custom live events ***/
-        $('body').on('click', opts.selector||'a.web2spa', function(e) { e.data = {url:$(this).attr('href'), add:true}; self.ajax_nav(e); });
+        //$('body').on('click', opts.selector||'a.web2spa', function(e) { e.data = {url:$(this).attr('href'), add:true}; self.ajax_nav(e); });
+        $('body').on('click', opts.selector||'a.web2spa', function(e) {
+          var url = $(this).attr('href'), add;
+          if (self.flyover_url) add = !self.flyover_url.test(url);
+          else add = true;
+          e.data = {url: url, add: add};
+          self.ajax_nav(e);
+        });
+
         $('body').on('click', 'a[href*="default\/user"]', function(e) {  // here begin spikes :(, ajax auth implementation is very bent
             e.data = {url:$(this).attr('href'), add:true, no_vars:true};
             if (e.data.url.indexOf('logout')==-1) self.ajax_nav(e);  // all 'user/...' function performed via ajax, but not 'logout'
@@ -136,7 +149,8 @@ var web2spa = {
           if (status=='success') {
               //console.log(data);
               //$userId=parseInt(xhr.getResponseHeader('User-Id'));  // userId = NaN or > 0
-              $userId=xhr.getResponseHeader('User-Id');  // hex string or null
+              $userId=xhr.getResponseHeader('User-Id').toString();  // hex string or null
+              if ($userId==='0' || $userId==='') $userId = 0;
               //console.log($userId);
               //if ($userId) console.log('logged in');
               $Admin=Boolean(xhr.getResponseHeader('Admin'));   // if user has membership 'administrator'
@@ -211,7 +225,7 @@ var web2spa = {
       //console.info(url)
       var parts = url.splitOnce('?');
       var request = {vars:{}, path:parts[0].clearSlashes(), query:''};
-      console.warn(request);
+      //console.warn(request);
       for(var i in this.routes) {
           var rt = i.split(':');
           var re = request.path.match("^"+rt[0]+"(\.*)");
@@ -277,14 +291,15 @@ var web2spa = {
       append - append or replace content
       doctitle - if exist, rewrite document title
     **/
-      _o = _o || $scope;
+      //_o = _o || $scope;
       _o.templateId = _o.templateId || $route.templateId;
       var El = _o.targetEl ? $('#'+_o.targetEl) : $route.targetEl,
           st = this._render(_o);
       if (_o.append)  El.append(st); // add rendering to element
       else {
         El.html(st); // replace
-        if (this.set_title) document.title = (_o.doctitle || $route.title).unescapeHTML();
+        //if (this.set_title) document.title = (_o.doctitle || $route.title).unescapeHTML();
+        if (_o.doctitle) document.title = _o.doctitle.unescapeHTML();
       }
   },
   _render: function(_o) { // render to string from templates cache
@@ -299,8 +314,11 @@ var web2spa = {
     var args = arguments; // for using in child function
     this.load({onload:function(data){
       if (data) {
-        var f = args[0];
-        this.render(typeof f === 'function' ? f() : f); // checking first argument - 'onLoad complete' handler or render object
+        var f = args[0] || $scope;
+        //this.render(typeof f === 'function' ? f() : f); // checking first argument - 'onLoad complete' handler or render object
+        if(typeof f === 'function') f = f();
+        if(this.set_title && !f.doctitle) f.doctitle = $route.title;
+        this.render(f); // checking first argument - 'onLoad complete' handler or render object
         if (args.length > 1) for (var i=1; i < args.length; i++) run(args[i]); // 'onRender complete' handlers, if exists
       }
     }});

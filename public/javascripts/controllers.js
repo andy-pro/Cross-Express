@@ -9,15 +9,26 @@ function ErrorCtrl() {
 /*** UserController ***/
 function UserCtrl() {
   document.title = L[$request.args[0]];   // login, logout, profile, change_password, register, request_reset_password
-  $request.json = false;
-  web2py_component(web2spa.compose_url($route.url), $route.target);	// as $.load, but provide form submit
+  //$request.json = false;
+  //web2py_component(web2spa.compose_url($route.url), $route.target);	// as $.load, but provide form submit
+	//console.log('user ctrl');
+	var action = $request.args[0] || 'login';
+	if (action == 'login') {
+		_.render({
+			templateId: 'UserLoginTmpl',
+      targetEl: 'modal-body',
+      doctitle: 'Log In'
+		});
+		$('.modal-title').text('Log In');
+		$('#modal-container').modal();
+	}
 }
 /* end UserController */
 
 //======================================
 /*** CrossController ***/
 function CrossesCtrl() {
-console.log('crosses ctrl');
+//console.log('crosses ctrl');
   web2spa.load_and_render();
 }
 /* end CrossController */
