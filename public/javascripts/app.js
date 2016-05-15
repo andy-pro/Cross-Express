@@ -12,12 +12,15 @@ const _DEBUG_ = false;
 //const _DEBUG_ = true;
 const _mypre = '<pre class="mypre">%s</pre>';
 
-_ = web2spa;
+//blade.Runtime.options.mount = '/static/views/';
+
+var _ = web2spa;
 
 var app = {
 
 	name: 'cross',
 	api: 'api',
+	controllers: {},
 
 	LINK_CLRS:  ['#fff', '#9ff', '#f9f', '#ff9', '#aaf', '#afa', '#faa', '#bdf', '#fbd', '#dfb', '#fdb'],
 	CABLE_CLRS: ['#fff', '#bff', '#fbf', '#ffb', '#ccf', '#bfc', '#fcc', '#cdf', '#fce', '#efe', '#fdc'],
@@ -29,7 +32,8 @@ var app = {
 
 	/* === stage hyperlink helpers === */
 	A_Cross: function(_o) {
-		return `${app.A}editcross/${_o.crossId.toString()}" title="${L._EDIT_CROSS_} ${_o.cross}">${_o.cross}</a>`;
+		//return `${app.A}editcross/${_o.crossId.toString()}" title="${L._EDIT_CROSS_} ${_o.cross}">${_o.cross}</a>`;
+		return `<a href="/crosses/${_o.crossId}" title="${L._EDIT_CROSS_} ${_o.cross}">${_o.cross}</a>`;
 	},
 	A_Vertical: function(_o, x) {
 		return `<a class="web2spa ${x||''}" href="${web2spa.start_path}vertical/${_o.verticalId}" title="${L._VIEW_VERT_} ${_o.vertical}">${_o.header||_o.vertical}</a>`;
@@ -117,68 +121,131 @@ var app = {
 	},
 	db_clear: function() { if (confirm("A you sure?")) location.href = web2spa.root_path + 'cleardb'; },
 
-	auth_menu: function() {
-		var menu = $userId ?
-		  { header: 'Welcome', subitems: [ // login, logout, profile, change_password, register, request_reset_password
-				  { href: 'profile', icon: 'user', title: 'Profile' },
-				  { href: 'change_password', icon: 'lock', title: 'Password' },
+	auth_menu: function(user) {
+	  $userId = user._id;
+  	console.log('auth_state_onchange occure', user);
+		var menu = {templateId: 'DropdownMenuTmpl'};
+		if ($userId) {
+			_.extendObj(menu, {
+				targetEl: 'toolsmenu',
+				header: L._TOOLS_,
+				prefix: '',
+				subitems: [
+					{ href: 'crosses/new', icon: 'th-list', title: L._NEW_CROSS_ },
+					{ href: 'cables', icon: 'random', title: L._CABLES_ }
+				]
+			});
+			_.render(menu);
+			// auth menu: login, logout, profile, change_password, register, request_reset_password
+			_.extendObj(menu, {
+			  header: L._WELC__ + user.first_name,
+				subitems: [
+				  { href: 'profile', icon: 'user', title: L._PROFILE_ },
+				  { href: 'change_password', icon: 'lock', title: L._PASS_ },
 					{ divider: 1 },
-				  { href: 'logout', icon: 'off', title: 'Log Out' }
-			]}
-			:
-		  { header: 'Log In', subitems: [
-				  { href: 'register', icon: 'user', title: 'Sign Up' },
-				  { href: 'request_reset_password', icon: 'lock', title: 'Lost password?' },
+				  { href: 'logout', icon: 'off', title: L._LOG_OUT_ }
+				]
+			});
+		} else {
+		  $('#toolsmenu').empty();
+			_.extendObj(menu, {
+				header: L._LOG_IN_,
+				subitems: [
+				  { href: 'register', icon: 'user', title: L._SIGN_UP_ },
+				  { href: 'request_reset_password', icon: 'lock', title: L._LOST_PASS_ },
 					{ divider: 1 },
-				  { href: 'login', icon: 'off', title: 'Log In' }
-			]};
-		menu.templateId = 'AuthMenuTmpl';
+				  { href: 'login', icon: 'off', title: L._LOG_IN_ }
+				]
+			});
+		}
+		menu.prefix = 'user/';
 		menu.targetEl = 'authmenu';
-		web2spa.render(menu);
+		_.render(menu);
+	},
+
+	/*** template bootstrap helpers ***/
+	/*
+		osize - size of title or offset, default 3
+		isize - input element size, default 8
+		title
+		type - default 'text'
+		name - default 'title'
+		value - default ''
+		require - default 'false'
+	*/
+	bs_input: function() {
+		var res = '';
+		for(var i=0; i < arguments.length; i++) {
+		  var _o = arguments[i];
+		  res += `<div class="form-group"><label class="control-label col-md-${_o.osize||3}">${_o.title}</label><div class="col-md-${_o.isize||8}"><input class="form-control" type="${_o.type||'text'}" name="${_o.name||'title'}" value="${_o.value||''}" ${_o.req?'required':''}></div></div>`;
+		}
+		return res;
+	},
+
+	bs_checkbox: function(_o) {
+		return `<div class="form-group"><div class="col-md-offset-${_o.osize||3} col-md-${_o.isize||8}"><div class="checkbox"><label><input class="${_o.class||'boolean'}" type="checkbox" name="${_o.name}" ${_o.checked?'checked':''}>${_o.title}</label></div></div></div>`;
+	},
+
+	bs_panel: function(heading, body, size, clr) {
+		return `<div class="col-md-${size||6}">
+			<div class="panel panel-${clr||'default'}">
+				<div class="panel-heading">${heading}</div>
+				<div class="panel-body">${body}</div>
+			</div>
+		</div>`;
 	}
+
+	/* end template helpers */
 
 };
 
 $(function () {
-	web2spa.init({	// application settings, !!! important: urls or url's parts without slashes
-		app: app.name,
+	web2spa.init({
+		name: app.name,
 		root: '',
 		mainpage: '',
-		api: app.api,	// 'cross/controllers/ajax.py' web2py controller for ajax requests
+		api: app.api,
 		//json_api: true,
 		post_url: '',
-		lexicon: 'lexicon',	// lexicon url: 'cross/ajax/lexicon.json'
-		//templates: 'templates', // templates url: 'cross/static/templates.html
-		//templates_json: 'templates', // templates.json url: 'cross/static/templates.json'
+		//auth_menu: app.auth_menu,
+		controllers: app.controllers,
+		lexicon: 'lexicon',
+		//templates: 'templates',
+		//templates_json: 'templates',
 		_TMPLS_: false, // convert templates to JSON format, copy from console
 		target: 'crosshome',	// main div for content
-		post_back: true, // enable history.back() when forms are posted
+		//post_back: true, // enable history.back() when forms are posted
 		esc_back: true, // enable history.back() when 'ESC' key pressed
 		selector: 'a:not(a[data-bypass])',
 		flyover_url: new RegExp('^\/user(?:$|\/\w*)'), // '/user', '/user/', '/user/...' not be pushed to history
 		//mega: true, // 'controller/function' model
 		set_title: true, // controller sets the document title
+		modal: ['#modal-container', '.modal-title', 'modal-body'],
 
 		routes: [
 			['Crosses', {index:true}],
-			['Vertical'],
-			['News', {template:'Vertical'}],
-			['Chain'],
-			['ViewFound'],
-			['EditCross', {login_req:true}],    // will be redirect to login path, if not authorized
-			['EditVertical', {login_req:true}],
-			['EditPlint', {login_req:true}],
-			['EditPair', {login_req:true}],
-			['EditFound', {login_req:true}],
-			['EditCables', {login_req:true}],
-			['Restore', {master: true, login_req:true}],	// url: 'cross/default/restore', because master=true
+			['Crosses'],
+			['News', {template:'vertical'}],
+			//['Cables', {login_req:true}],
+			['Cables'],
+			//['Vertical'],
+			//['Chain'],
+			//['ViewFound'],
+			//['EditCross', {login_req:true}],    // will be redirect to login path, if not authorized
+			//['EditVertical', {login_req:true}],
+			//['EditPlint', {login_req:true}],
+			//['EditPair', {login_req:true}],
+			//['EditFound', {login_req:true}],
+			//['Restore', {master: true, login_req:true}],	// url: 'cross/default/restore', because master=true
 			//['User', {master: true, login_path:true}],  // url: 'cross/default/user' and this is login path pluralistically
 			['User'],
-			['Error', {error_path: true}]],
+			['Error', {error_path: true}]
+		],
 
-		beforeStart: function () {   /* callback, perform after app load & init, but before start, application setup */
+		beforeStart: function() {   /* callback, perform after app load & init, but before start, application setup */
 			L = web2spa.lexicon.data;   // global shorthand to lexicon
-			tbheaders = [L._CROSS_, L._VERTICAL_, L._PLINT_, L._PAIR_];
+			tbheaders = [L._CROSS_, L._VERT_, L._PLINT_, L._PAIR_];
+			L._BTNBACK_ = `<button type="button" class="close" aria-hidden="true" onclick="history.back();return false;" title="${L._BACK_} (Esc)">&times;</button>`;
 			L._BTNOKCNSL_ = web2spa._render({templateId:'btnOkCancelTmpl'});    // helpers, inline templates for common buttons
 			var icon = '<i class="glyphicon glyphicon-%s">';
 			L.i_ok = icon.format('ok');
@@ -188,15 +255,26 @@ $(function () {
 			app.editMode = new CheckBox('editMode');
 			app.wrapMode = new CheckBox('wrapMode');
 			_DEBUG_ && web2spa.targetEl.before('<div id="debug" class="well"><button class="btn btn-default" onclick="vars_watch()">Watch</button><span id="varswatch"></span></div>');
-			app.auth_menu();
+			//app.auth_menu();
+			_.load({
+			  url: 'user/info',
+				data: true,
+				onload: app.auth_menu
+			});
 		},
-
 		beforeNavigate: function() {
 			app.chainMode.reset_handler();
 		},
-
 		afterNavigate: function() {
 			_DEBUG_ && app.vars_watch();
+		},
+		onLogIn: function(user) {
+			app.auth_menu(user);
+			_.navigate();
+		},
+		onLogOut: function(user) {
+			app.auth_menu(user);
+			_.navigate();
 		}
 
 	});

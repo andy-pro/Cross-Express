@@ -222,14 +222,19 @@ Link.prototype = {
 
 /*** Model: Cable ***/
 function Cable(cable) { // constructor
-	if (!(cable instanceof Array)) cable = ['', '', '', 0]
+	//if (!(cable instanceof Array)) cable = ['', '', '', 0]
+	if (!cable) cable = {
+		title: '',
+		details: '',
+		color: 0
+	}
 	this.row = $('<tr>');
-	this.title = this.addCell(this._inp).val(cable[1]);
-	this.details = this.addCell(this._inp).val(cable[2]);
-	this.clr = cable[3];
+	this.title = this.addCell(this._inp).val(cable.title);
+	this.details = this.addCell(this._inp).val(cable.details);
+	this.clr = cable.color;
 	this.addCell('<select>').on('change', colorChange).colouring(this.clrs).val(this.clr).trigger('change');
-	if (cable[0]) {
-		this.id = cable[0];
+	if (cable._id) {
+		this.id = cable._id;
 		this.delete = $('<input type="checkbox">');
 	}
 	$('<td class="padd9">').append(this.delete).appendTo(this.row);
@@ -262,4 +267,35 @@ $.fn.colouring = function(_c) {
 	var El = this;
 	$.each(_c, function(i) { $('<option>').css('background', this).attr('value', i).appendTo(El); });
 	return this;
+}
+
+//======================================
+/*** Prototype: CheckBox, performs set/get data to/from localStorage ***/
+    /* constructor, usage: var flag = new CheckBox(id, hC);
+    id -checkbox id
+    hC - checkbox click event handler
+    */
+function CheckBox(name, hC) {
+    this.name = name;
+    this.id = '#' + name;
+    this.value = (localStorage[name] == 'true');
+    this.init(hC);
+}
+CheckBox.prototype = {
+    init: function(hC, runonce) {
+        this.handler = hC;
+        var self = this;
+        this.El = $(this.id);
+        this.El.prop('checked', this.value).off();
+        if (hC) {
+            this.El.click(function() { self.click(this.checked); });
+            if (runonce) this.click(this.value);
+        }
+    },
+    click: function(checked) {
+        localStorage[this.name] = checked;
+        this.value = checked;
+        run.call(this.handler, checked);
+    },
+    reset_handler: function() { this.handler = null; }
 }

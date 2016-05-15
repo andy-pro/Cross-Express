@@ -1,0 +1,5 @@
+- crosses.forEach(function(cross) {
+  - var heading = app.A_Cross({crossId:cross[0], cross:cross[1]}), body = ''
+  - cross[2].forEach(function(vertical) { body += app.A_Vertical({verticalId:vertical[0], vertical:vertical[1]}, 'inblock') })  
+  != app.bs_panel(heading, body, 4)
+- })

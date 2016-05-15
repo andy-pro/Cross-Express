@@ -4,10 +4,9 @@
  * Module dependencies.
  */
 
-//var port = require('../config.json').port;
 var config = require('../config.json');
 var port = config.port;
-config.static = process.cwd() + '/public';
+//config.static = process.cwd() + '/public';
 
 //console.log(config);
 
@@ -19,9 +18,9 @@ var lexicon = require('../lib/lexicon');
 lexicon.setup(require('../lexicon.json'));
 
 var app = require('../app');
+
 var debug = require('debug')('cross-express:server');
 var http = require('http');
-app.set('port', port);
 
 /**
  * Create HTTP server.

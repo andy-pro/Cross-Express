@@ -18,6 +18,40 @@
 <%});%>
 </script>
 
+<script type="text/html" id="CrossTmpl">
+<%var cross = crosses[0],
+      title = cross[1];%>
+  <div class="col-md-5">
+    <div class="panel panel-primary">
+      <div class="panel-heading"><%print(`${L._CROSS_} ${title}`, L._BTNBACK_);%></div>
+      <div class="panel-body">
+
+
+        <!-- <div class="form-group"> -->
+          <!-- <label class="col-md-3 control-label"><%=L._VERT_%></label> -->
+          <!-- <div class="well col-md-offset-3 col-md-8"> -->
+          <!-- <div class="well"> -->
+          <%cross[2].forEach(function(vertical){print(app.A_Vertical({verticalId:vertical[0], vertical:vertical[1]}, "inblock"));});%>
+          <!-- </div> -->
+        <!-- </div> -->
+
+        <%if($userId) {%>
+<hr>
+        <form class="form-horizontal">
+          <%print(app.bs_input({title: L._TITLE_, name: "title", value: title, req: true}),
+                  app.bs_checkbox({class: "delete", title: L._DELETE__+L._CROSS_}),
+                  app.bs_input({title: L._VERT_TITLE_, name: "verticaltitle"}),
+                  L._BTNOKCNSL_
+                  );%>
+        </form>
+        <%}%>
+      </div>
+
+    </div>
+  </div>
+</script>
+
+
 <script type="text/html" id="VerticalTmpl">
   <div class="panel panel-default">
     <div class="panel-heading"><%=header%><%=L._BTNBACK_%>
@@ -407,7 +441,7 @@
 </div>
 </script>
 
-<script type="text/html" id="EditCablesTmpl">
+<script type="text/html" id="CablesTmpl">
 <div class="col-md-8">
   <div class="panel panel-primary">
     <div class="panel-heading"><label><%=L._CABLES_%></label><%=L._BTNBACK_%></div>
@@ -432,54 +466,46 @@
 </div>
 </script>
 
-<script type="text/html" id="AuthMenuTmpl">
-<a class="dropdown-toggle" rel="nofollow" href="#" data-toggle="dropdown" aria-expanded="false"><%=header%><span class="caret"> </span></a>
+<script type="text/html" id="DropdownMenuTmpl">
+<a class="dropdown-toggle" href="#" data-toggle="dropdown"><%=header%><span class="caret"></span></a>
 <ul class="dropdown-menu">
   <%subitems.forEach(function(row){
     if(row.divider) print('<li class="divider"></li>');
-    else print(`<li><a rel="nofollow" href="/user/${row.href}"><i class="glyphicon glyphicon-${row.icon}"></i>&nbsp;${row.title}</a></li>`);
+    else print(`<li><a href="/${prefix}${row.href}"><i class="glyphicon glyphicon-${row.icon}"></i>&nbsp;${row.title}</a></li>`);
   });%>
 </ul>
 </script>
 
 <script type="text/html" id="UserLoginTmpl">
-<form class="form-horizontal">
+  <form id="authform" class="form-horizontal" action="user">
+    <%print(app.bs_input(
+      {title: "E-mail", name: "email", req: true},
+      {title: L._PASS_, type: "password", name: "password", req: true}
+      ), app.bs_checkbox({title: L._RM3D_}));%>
+    <!-- <div class="modal-footer"> -->
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <input class="btn btn-primary btn-default" type="submit" value="<%=L._LOG_IN_%>">
+        <button class="btn btn-default"><%=L._SIGN_UP_%></button>
+        <button class="btn btn-default"><%=L._LOST_PASS_%></button>
+      </div>
+    </div>
+    <!-- </div> -->
+  </form>
+</script>
 
-  <div class="form-group">
-  <label class="control-label col-sm-3">E-mail</label>
-  <div class="col-sm-9">
-  <input class="form-control" type="text" name="email" value="">
-  </div>
-  </div>
-
-  <div class="form-group">
-  <label class="control-label col-sm-3">Password</label>
-  <div class="col-sm-9">
-  <input class="form-control" type="password" name="password" value="">
-  </div>
-  </div>
-
-  <div class="form-group">
-  <div class="col-sm-offset-3 col-sm-9">
-  <div class="checkbox">
-  <label>
-  <input class="boolean" type="checkbox" name="remember_me" checked="">
-  Remember me (for 30 days)
-  </label>
-  </div>
-  </div>
-  </div>
-
-  <!-- <div class="modal-footer"> -->
-  <div class="form-group">
-  <div class="col-sm-offset-3 col-sm-9">
-  <input class="btn btn-primary btn-default" type="submit" value="Log In">
-  <button class="btn btn-default">Sign Up</button>
-  <button class="btn btn-default">Lost Password</button>
-  </div>
-  </div>
-  <!-- </div> -->
-
-</form>
+<script type="text/html" id="UserRegisterTmpl">
+  <form id="authform" class="form-horizontal" action="user">
+    <%print(app.bs_input(
+      {title: L._FIRST_NAME_, name: "first_name", req: true},
+      {title: L._LAST_NAME_, name: "last_name", req: true},
+      {title: "E-mail", name: "email", req: true},
+      {title: L._PASS_, type: "password", name: "password", req: true},
+      {title: L._CONFIRM_PASS_, type: "password", name: "password_two", req: true}
+    ));%>
+    <div class="form-group">
+      <div class="col-sm-8 col-sm-offset-3"><input class="btn btn-primary" type="submit" value="<%=L._SIGN_UP_%>"></div>
+    </div>
+  </form>
 </script>
 

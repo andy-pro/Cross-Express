@@ -1,0 +1,20 @@
+.col-md-8
+  .panel.panel-primary
+    .panel-heading
+      label #{L._CABLES_}
+      != L._BTNBACK_
+    .panel-body
+      form.form-horizontal
+        //-button#addCable.btn.btn-sm.btn-success.pull-right(type='button', title=#{L._ADD_CABLE_}) +
+        button#addCable.btn.btn-sm.btn-success.pull-right(type='button', title='#{L._ADD_CABLE_}') +
+        br
+        br
+        table#cabletable.table.table-condensed
+          thead
+            tr.active
+              th(width='40%') #{L._TITLE_}
+              th(width='40%') #{L._DETAILS_}
+              th(width='10%') #{L._COLOR_}
+              th #{L._DEL_}
+          tbody#cablebody
+        != L._BTNOKCNSL_

@@ -1,0 +1,17 @@
+- var cross = crosses[0], title = cross[1]
+.col-md-5
+  .panel.panel-primary
+    .panel-heading #{L._CROSS_} #{title} 
+      != L._BTNBACK_
+    .panel-body
+      - cross[2].forEach(function(vertical) {
+        != app.A_Vertical({verticalId:vertical[0], vertical:vertical[1]}, "inblock")
+      - })
+      - if($userId) {
+        hr
+        form.form-horizontal
+          != app.bs_input({title: L._TITLE_, name: "title", value: title, req: true})
+          != app.bs_checkbox({class: "delete", title: L._DELETE__+L._CROSS_})
+          != app.bs_input({title: L._VERT_TITLE_, name: "verticaltitle"})
+          != L._BTNOKCNSL_
+      - }

@@ -152,7 +152,7 @@ table#chaintable {
     width: 100%;
     margin: 15px 0px;
 }
-td.padd9 { padding: 9px!important; }
+td.padd9 { padding: 4px!important; }
 tr.move { cursor: move; }
 
 /** vertical table css rules **/

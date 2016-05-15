@@ -1,0 +1,1 @@
+"C:\Program Files\MongoDB\Server\3.2\bin\mongod" --dbpath="c:\_python\web2py\databases" --port="8001" --storageEngine="mmapv1"

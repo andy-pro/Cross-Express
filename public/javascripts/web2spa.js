@@ -1,4 +1,16 @@
 /*** Single Page Application approach for web2py framework ***/
+var $request = {},
+			/* keys:
+			args:[], vars:{}, url, path, query:var1=value1&var2=value2..., (url=path/arg1/arg2/../argn+&+query),
+			json: if true(default), request will be e.g. 'welcome/ajax/func.json',
+			clearpath: if true, args and vars not added to url,
+			type: default GET,
+			unescape: if true, data will be as is; by default all data escaped,
+			animate: show 'loading.gif' while ajax go on,
+			txdata: transmit to server */
+		$route = {};	// {title, url, templateId, controller, login_req, target, targetEl}
+
+
 var web2spa = {
   // aliases for bootstrap panel color classes
   $clrp: 'panel-primary',
@@ -13,17 +25,19 @@ var web2spa = {
   },
   init: function(opts) {
     /* opts's keys:
-        app: application name, e.g. 'welcome',
-        root: application root, e.g. '/welcome',
-        mainctrl: default controller, 'default' by default,
-        mainpage: default function, 'index' by default,
-        api: controller for api request, mainctrl by default,
-        lexicon: type 'lexicon' for 'welcome/ajax/lexicon.json',
-        post_url: POST form request path; type 'update'(default) for 'welcome/ajax/update',
-        target: type 'content' for '<div id='content'>, 'target' by default,
-        templates: default 'templates' for 'welcome/static/templates.html',
-        post_back: enable automatic history.back() when forms are posted,
-        esc_back: enable history.back() when 'ESC' key pressed,
+		// !!! important: urls or url's parts in opts object must be without slashes
+        name: application name, e.g. 'welcome'
+        root: application root, e.g. '/welcome'
+				json_api: set to true if server require '.json' ext
+        mainctrl: default controller, 'default' by default
+        mainpage: default function, 'index' by default
+        api: controller for api request, mainctrl by default
+        lexicon: type 'lexicon' for 'welcome/ajax/lexicon.json'
+        post_url: POST form request path; type 'update'(default) for 'welcome/ajax/update'
+        target: type 'content' for '<div id='content'>, 'target' by default
+        templates: default 'templates' for 'welcome/static/templates.html'
+        post_back: enable automatic history.back() when forms are posted
+        esc_back: enable history.back() when 'ESC' key pressed
         routes: [ ['Route1', opts], ['Route2', opts], ... ], opts see in 'add_route'
         selector: this hyperlinks will be redirect to javascript calls instead url, 'a.web2spa' is default
         flyover_url: RegExp, matched location urls will be not pushed to history
@@ -34,74 +48,102 @@ var web2spa = {
     /*** Global vars & objects: ***/
     $scope = {}; // controller data
     // each ajax request set this vars
+    //$userId = -1; // for auth_menu initial call
     $userId = 0;
     $Admin = 0;
     //
-    $route = {};	// {title, url, templateId, controller, login_req, target, targetEl}
-    $request = {};	/* keys:
-        args:[], vars:{}, url, path, query:var1=value1&var2=value2..., (url=path/arg1/arg2/../argn+&+query),
-        json: if true(default), request will be e.g. 'welcome/ajax/func.json',
-        clearpath: if true, args and vars not added to url,
-        type: default GET,
-        unescape: if true, data will be as is; by default all data escaped,
-        animate: show 'loading.gif' while ajax go on,
-        txdata: transmit to server
-    */
-    // !!! important: urls or url's parts in opts object must be without slashes
-    this.app = opts.app;    // e.g. 'welcome'
-    this.root = opts.root;    // e.g. 'welcome' for 'host/welcome'
-    this.mega = opts.mega; // 'controller/function' model
-    this.mainctrl = opts.mega ? opts.mainctrl||'default' : ''; // main controller or empty
-    this.mainpage = (opts.mainpage===undefined) ? 'index' : opts.mainpage;  // default 'index'
-    this.root_path = '/%s/%s/'.format(this.root,this.mainctrl).normPath(); // e.g. '/welcome/default/'
-    this.start_path = '%s%s/'.format(this.root_path,this.mainpage).normPath();	// e.g. '/welcome/default/index/'
-    this.static_path = '/%s/static/'.format(this.root).normPath(); // e.g. '/welcome/static/'
-    this.json_api = opts.json_api; // if server require '.json' ext
-    //this.api = '/%s/%s'.format(this.root, (opts.json_api ? (opts.api||this.mainctrl)+'/' : '')).normPath(); // e.g. '/welcome/ajax/'
-    this.api = '/%s/%s/'.format(this.root, opts.api||this.mainctrl).normPath(); // e.g. '/welcome/ajax/'
+
+
+		this.keysCopier(this, opts, [
+			'name', 'root', 'mega', 'json_api', 'post_back', 'set_title', 'flyover_url',
+			'beforeNavigate', 'afterNavigate', 'onLogIn', 'onLogOut', 'controllers'
+		]);
+    //this.name = opts.name;
+    //this.root = opts.root;
+    //this.mega = opts.mega;
+    this.mainctrl = opts.mega ? opts.mainctrl||'default' : '';
+    this.mainpage = (opts.mainpage===undefined) ? 'index' : opts.mainpage;
+    this.root_path = this.pather(this.root,this.mainctrl);
+    this.start_path = this.pather(this.root_path,this.mainpage);
+    this.static_path = this.pather(this.root,'static/');
+    //this.json_api = opts.json_api; // if server require '.json' ext
+    this.api = this.pather(this.root, opts.api||this.mainctrl);
     this.post_url = (opts.post_url===undefined) ? 'update' : opts.post_url; // form POST url request, e.g. 'update' become '/welcome/ajax/update/'
     this.target = opts.target||'target';
     this.targetEl = $('#'+this.target);
     this.gif = $('div#gif');
     this.msg_div = $("div.flash");
     this.msg_box = ($.web2py) ? this.msg_div : this.msg_div.find('span');
-    //if (!($.web2py)) $('body').on('click', '.flash', function(e) { $(this).slideUp(); });
     if (!($.web2py)) this.msg_div.click(function() { $(this).slideUp(); });
-    this.post_back = opts.post_back;
-    this.beforeNavigate = opts.beforeNavigate;
-    this.afterNavigate = opts.afterNavigate;
-    this.set_title = opts.set_title;
-    this.flyover_url = opts.flyover_url;
+    //this.post_back = opts.post_back;
+    //this.beforeNavigate = opts.beforeNavigate;
+    //this.afterNavigate = opts.afterNavigate;
+    //this.set_title = opts.set_title;
+    //this.flyover_url = opts.flyover_url;
+    //this.onLogIn = opts.onLogIn;
+    //this.onLogOut = opts.onLogOut;
+    //this.check_auth = function(u) {
+      //if (u==='0'||!u) u = 0;
+      //console.log('u',u);
+      //console.log('$userId',$userId);
+      //if (u!=$userId) {
+        //$userId = u;
+        //run(opts.auth_onchange);
+      //}
+    //}
+		var self = this, promises = [$.ready];   // waiting document ready
     if (opts.esc_back) document.onkeydown = function(e) {   // enable history.back() when 'ESC' key pressed
-        if (e.keyCode == 27) { history.back(); return false; }  // escape key code check
+      if (e.keyCode == 27) { // escape key code check
+			  if (self.modal && self.modal.showed) self.modal.hide();
+				else {
+					history.back();
+					return false;
+				}
+			}
     }
-    var self = this, promises = [$.ready];   // waiting document ready
-    if (opts.lexicon) {
-        this.lexicon = {url:opts.lexicon, unescape:true, data:true};
-        promises.push(this.load(this.lexicon));
+		if (opts.modal) {
+      this.modal = {
+				El: $(opts.modal[0]),
+				show: function(title, tmpl) {
+					self.render({ templateId: tmpl, targetEl: opts.modal[2] });
+					$(opts.modal[1]).text(title);
+					this.El.modal({keyboard: !opts.esc_back});
+					this.showed = true;
+				},
+				hide: function() {
+					this.El.modal('hide');
+				}
+			}
+			this.modal.El.on('hide.bs.modal', function (e) {
+				self.modal.showed = false;
+			});
     }
     if (opts.templates_json) promises.push($.get(this.static_path + opts.templates_json + '.json', function(data) { self.add_json_pack(data); } ));
     else promises.push($.get(this.static_path + (opts.templates || 'templates') + '.html', function(data) { self.add_pack(data); } ));
     this._TMPLS_ = opts._TMPLS_; // convert templates to JSON format, copy from console
+    if (opts.lexicon) {
+      this.lexicon = {url:opts.lexicon, unescape:true, data:true};
+      promises.push(this.load(this.lexicon));
+    }
     $.when.apply($, promises).always(function() {
-        $.each(opts.routes, function () { self.add_route(this); });
-        /*** add custom live events ***/
-        //$('body').on('click', opts.selector||'a.web2spa', function(e) { e.data = {url:$(this).attr('href'), add:true}; self.ajax_nav(e); });
-        $('body').on('click', opts.selector||'a.web2spa', function(e) {
-          var url = $(this).attr('href'), add;
-          if (self.flyover_url) add = !self.flyover_url.test(url);
-          else add = true;
-          e.data = {url: url, add: add};
-          self.ajax_nav(e);
-        });
+      $.each(opts.routes, function () { self.add_route(this); });
+      /*** add custom live events ***/
+      //$('body').on('click', opts.selector||'a.web2spa', function(e) { e.data = {url:$(this).attr('href'), add:true}; self.ajax_nav(e); });
+      $('body').on('click', opts.selector||'a.web2spa', function(e) {
+        var url = $(this).attr('href'), add;
+        if (self.flyover_url) add = !self.flyover_url.test(url);
+        else add = true;
+        e.data = {url: url, add: add};
+        self.ajax_nav(e);
+      });
 
-        $('body').on('click', 'a[href*="default\/user"]', function(e) {  // here begin spikes :(, ajax auth implementation is very bent
-            e.data = {url:$(this).attr('href'), add:true, no_vars:true};
-            if (e.data.url.indexOf('logout')==-1) self.ajax_nav(e);  // all 'user/...' function performed via ajax, but not 'logout'
-        });
-        window.addEventListener("popstate", function(e) { e.data={url:self.get_location()}; self.ajax_nav(e) });
-        run(opts.beforeStart);  // performing user defined actions before app start
-        self.navigate();	//*** START APPLICATION ***, get url from browser location bar by default
+      $('body').on('click', 'a[href*="default\/user"]', function(e) {  // here begin spikes :(, ajax auth implementation is very bent
+        e.data = {url:$(this).attr('href'), add:true, no_vars:true};
+        if (e.data.url.indexOf('logout')==-1) self.ajax_nav(e);  // all 'user/...' function performed via ajax, but not 'logout'
+      });
+      window.addEventListener("popstate", function(e) { e.data={url:self.get_location()}; self.ajax_nav(e) });
+      self.run(opts.beforeStart);  // performing user defined actions before app start
+      self.navigate();	//*** START APPLICATION ***, get url from browser location bar by default
     });
   },
 
@@ -122,16 +164,25 @@ var web2spa = {
 
   compose_url: function(_url, params) {
       params || (params = $request);
-      var url = '';
-      var json = (params.json === false || !this.json_api) ? '' : '.json';
+      //var url = '';
+      _url += (params.json === false || !this.json_api) ? '' : '.json';
+      var url = [this.api, _url],
+          query = '';
+      //var json = (params.json === false || !this.json_api) ? '' : '.json';
       if (!params.clearpath) {
-          for(var i in params.args) url += '/' + params.args[i];
-          if (!$.isEmptyObject(params.vars)) url += '?' + $.param(params.vars);
+          //for(var i in params.args) url += '/' + params.args[i];
+          if (params.args) url = url.concat(params.args);
+          if (!$.isEmptyObject(params.vars)) query = '?' + $.param(params.vars);
       }
-      return this.api + _url + json + url;
+      url = this.pather(url);
+      if (query) url.replace(/\/$/, query);
+      //return this.api + _url + url;
+      //console.log(url);
+      return url;
   },
 
   load: function(opts) {    /*** Ajax async Load  ***/
+	//console.log(opts);
       opts || (opts = {});
       opts.args = opts.args || $request.args;
       opts.vars = opts.vars || $request.vars;
@@ -146,18 +197,36 @@ var web2spa = {
           beforeSend: function() { if (opts.animate) self.gif.show(); }
       }).always(function(data, status, xhr) {
           self.gif.hide();
-          if (status=='success') {
-              //console.log(data);
-              //$userId=parseInt(xhr.getResponseHeader('User-Id'));  // userId = NaN or > 0
-              $userId=xhr.getResponseHeader('User-Id').toString();  // hex string or null
-              if ($userId==='0' || $userId==='') $userId = 0;
-              //console.log($userId);
-              //if ($userId) console.log('logged in');
-              $Admin=Boolean(xhr.getResponseHeader('Admin'));   // if user has membership 'administrator'
-          } else {
-              console.warn(data, status, xhr);
-              self.raise_error(data.status, status);
-              data = false; // substitution data to false, if error
+          //if (status=='success') {
+            //console.log(data);
+            //$userId=parseInt(xhr.getResponseHeader('User-Id'));  // userId = NaN or > 0
+
+
+            //self.check_auth(xhr.getResponseHeader('User-Id'));
+            //if (u==='0'||!u) u = 0;
+            //console.log('u',u);
+            //console.log('$userId',$userId);
+            //if (u!=$userId) {
+              //$userId = u;
+              //run(self.auth_onchange);
+            //}
+            //var u = xhr.getResponseHeader('User-Id');
+            //if (u) {
+              //u = u.toString();
+              //$userId = (u==='0') 0 : u;
+            //} else $userId = 0;
+
+
+            //$userId=xhr.getResponseHeader('User-Id').toString();  // hex string or null
+            //if ($userId==='0' || $userId==='') $userId = 0;
+            //console.log($userId);
+            //if ($userId) console.log('logged in');
+            //$Admin=Boolean(xhr.getResponseHeader('Admin'));   // if user has membership 'administrator'
+          //} else {
+					if (status!='success') {
+						console.warn(data, status, xhr);
+						self.raise_error(data.status, status);
+						data = false; // substitution data to false, if error
           }
           if (opts.data) opts.data = data;
           else $scope = data;
@@ -200,8 +269,10 @@ var web2spa = {
       this.routes[route] = {
           title: title,
           url: lowtitle,
-          templateId: (opts.template||title)+'Tmpl',
-          controller: window[title+'Ctrl'],
+          //templateId: (opts.template||title)+'Tmpl',
+          templateId: (opts.template||lowtitle),
+          //controller: window[title+'Ctrl'],
+          controller: this.controllers[title+'Ctrl'],
           login_req: opts.login_req,
           target: target,
           targetEl: $('#'+target)
@@ -218,7 +289,7 @@ var web2spa = {
       }
   },
   navigate: function(url, params) {
-      run(this.beforeNavigate);
+      this.run(this.beforeNavigate);
       url = url || this.get_location();
       params = params || {};
       url = decodeURIComponent(url);
@@ -251,7 +322,7 @@ var web2spa = {
               }
           }
       }
-      run(this.afterNavigate);
+      this.run(this.afterNavigate);
   },
   /* end Router */
 
@@ -283,6 +354,43 @@ var web2spa = {
       }
   },
   add_json_pack: function(pack) { for(var id in pack) this.add(id, pack[id]); },
+
+
+
+  //render: function(_o) {
+    ///** render object to element:
+    //reserved keys:
+      //templateId - template id in cache or html
+      //targetEl - element id in DOM for rendering into
+      //append - append or replace content
+      //doctitle - if exist, rewrite document title
+    //**/
+      ////_o = _o || $scope;
+      //_o.templateId = _o.templateId || $route.templateId;
+      //var El = _o.targetEl ? $('#'+_o.targetEl) : $route.targetEl;
+      //if (El) {
+        //var st = this._render(_o);
+        //if (st) {
+          //if (_o.append)  El.append(st); // add rendering to element
+          //else {
+            //El.html(st); // replace
+            ////if (this.set_title) document.title = (_o.doctitle || $route.title).unescapeHTML();
+            //if (_o.doctitle) document.title = _o.doctitle.unescapeHTML();
+          //}
+        //}
+      //}
+  //},
+  //_render: function(_o) { // render to string from templates cache
+      //var id = _o.templateId;
+      ////if (!this.cache[id]) this.add(id, document.getElementById(id).innerHTML, true);   // try search template in current html document, if not found in cache
+      //if (!this.cache[id]) { // try search template in current html document, if not found in cache
+        //var El = document.getElementById(id);
+        //if (El) this.add(id, El.innerHTML, true);
+      //}
+      //return (typeof this.cache[id] === 'function') ? this.cache[id](_o || {}) : '';
+  //},
+
+
   render: function(_o) {
     /** render object to element:
     reserved keys:
@@ -293,36 +401,79 @@ var web2spa = {
     **/
       //_o = _o || $scope;
       _o.templateId = _o.templateId || $route.templateId;
-      var El = _o.targetEl ? $('#'+_o.targetEl) : $route.targetEl,
-          st = this._render(_o);
-      if (_o.append)  El.append(st); // add rendering to element
-      else {
-        El.html(st); // replace
-        //if (this.set_title) document.title = (_o.doctitle || $route.title).unescapeHTML();
-        if (_o.doctitle) document.title = _o.doctitle.unescapeHTML();
+      var El = _o.targetEl ? $('#'+_o.targetEl) : $route.targetEl;
+      if (El) {
+        var st = this._render(_o);
+        if (st) {
+          if (_o.append)  El.append(st); // add rendering to element
+          else {
+            El.html(st); // replace
+            //if (this.set_title) document.title = (_o.doctitle || $route.title).unescapeHTML();
+            if (_o.doctitle) document.title = _o.doctitle.unescapeHTML();
+          }
+        }
       }
   },
   _render: function(_o) { // render to string from templates cache
       var id = _o.templateId;
-      if (!this.cache[id]) this.add(id, document.getElementById(id).innerHTML, true);   // try search template in current html document, if not found in cache
+      //if (!this.cache[id]) this.add(id, document.getElementById(id).innerHTML, true);   // try search template in current html document, if not found in cache
+      if (!this.cache[id]) { // try search template in current html document, if not found in cache
+        var El = document.getElementById(id);
+        if (El) this.add(id, El.innerHTML, true);
+      }
       return (typeof this.cache[id] === 'function') ? this.cache[id](_o || {}) : '';
   },
+
+
   load_and_render: function()	{
-    /** arguments:
+
+	    /** arguments:
     [0] - object for template or function that returns such object, $scope accepted if empty
     [1]...[n] - all these functions are performed in the order after template rendering **/
     var args = arguments; // for using in child function
-    this.load({onload:function(data){
+    this.load({onload:function(data) {
       if (data) {
-        var f = args[0] || $scope;
+        var f = args[0] || $scope,
+				    self = this;
         //this.render(typeof f === 'function' ? f() : f); // checking first argument - 'onLoad complete' handler or render object
         if(typeof f === 'function') f = f();
+				console.log(this);
         if(this.set_title && !f.doctitle) f.doctitle = $route.title;
-        this.render(f); // checking first argument - 'onLoad complete' handler or render object
-        if (args.length > 1) for (var i=1; i < args.length; i++) run(args[i]); // 'onRender complete' handlers, if exists
+        //this.render(f);
+				blade.Runtime.loadTemplate($route.templateId, function(err, tmpl) {
+				  if(err) console.error(err);
+					else {
+						tmpl(data, function(err, html) {
+							//console.log('err2', err);
+							$route.targetEl.html(html);
+							if (args.length > 1) for(var i=1; i < args.length; i++) self.run(args[i]); // 'onRender complete' handlers, if exists
+						});
+					}
+
+				});
+
       }
     }});
-  },
+
+
+
+	},
+  //load_and_render: function()	{
+    ///** arguments:
+    //[0] - object for template or function that returns such object, $scope accepted if empty
+    //[1]...[n] - all these functions are performed in the order after template rendering **/
+    //var args = arguments; // for using in child function
+    //this.load({onload:function(data){
+      //if (data) {
+        //var f = args[0] || $scope;
+        ////this.render(typeof f === 'function' ? f() : f); // checking first argument - 'onLoad complete' handler or render object
+        //if(typeof f === 'function') f = f();
+        //if(this.set_title && !f.doctitle) f.doctitle = $route.title;
+        //this.render(f); // checking first argument - 'onLoad complete' handler or render object
+        //if (args.length > 1) for(var i=1; i < args.length; i++) this.run(args[i]); // 'onRender complete' handlers, if exists
+      //}
+    //}});
+  //},
   /* end Resig template system */
 
   /*** web2py flash message Helper ***/
@@ -334,7 +485,42 @@ var web2spa = {
       this.msg_div.css({'background-color': this.msg_color[color] || this.msg_color.danger});
       if (delay) this.msg_div.slideDown().delay(delay*1000).slideUp();
       else this.msg_div.slideDown();
-  }
+  },
+	//======================================
+	extendObj: function(orig, add) {
+		if (add && typeof add === 'object') {
+			var keys = Object.keys(add);
+			var i = keys.length;
+			while (i--) orig[keys[i]] = add[keys[i]];
+		}
+	},
+	keysCopier: function(orig, add, keys) {
+		if (add && typeof add === 'object') {
+			var i = keys.length;
+			while (i--) orig[keys[i]] = add[keys[i]];
+		}
+	},
+	/*** run Helpers, using: run(function), if no arguments; run.call(function, arguments...) instead. Method 'apply' pass arguments as collection ***/
+	//run: function() {
+		//if (this === window) {
+			//if (typeof arguments[0] === 'function') arguments[0]();
+		//} else if (typeof this === 'function') this.apply(window, arguments);
+	//},
+	run: function() {
+		if (typeof this === 'function') this.apply(window, arguments);
+		else if (typeof arguments[0] === 'function') arguments[0]();
+	},
+	run_hE: function(f, El, event) {
+	  if (typeof f === 'function') f.call(El, event);
+	},
+	//======================================
+	/*** path Helper  ***/
+	pather: function() {
+		var args = (arguments[0] instanceof Array) ? arguments[0] : arguments,
+				res = '';
+		for(var i=0; i<args.length; i++) res += '/' + args[i];
+		return (res+'/').normPath();
+	}
 }
 /* end web2spa */
 
@@ -411,6 +597,7 @@ Form.prototype = {
             reply.txdata.append('userId', $userId);
             reply.txdata.append('formname', $scope.formname);
             reply.txdata.append('formkey', $scope.formkey);
+            //reply.txdata.append('_csrf', $scope.formkey);
             if ($scope.formData) for(var fd in $scope.formData) reply.txdata.append(fd, $scope.formData[fd]);
             $.extend(reply, {url: this.post_url, type: 'POST', animate: form && form.name=='upload', data: true});
             promise = web2spa.load(reply);
@@ -421,6 +608,13 @@ Form.prototype = {
         }
         $.when(promise).always(function() {
             if (reply.data) { // reply obj modyfied in web2spa 'load' function
+              var user = reply.data.user;
+              if (user) {
+							  //web2spa.navigate();
+                web2spa.onLogIn(user);
+                //$('#modal-container').modal('hide');
+                web2spa.modal.hide();
+              }
               if (reply.data.show) web2spa.show_msg(reply.data.details, reply.data.status ? 'success' : 'danger', 5);
               if (reply.data.location) web2spa.navigate(reply.data.location, {add:true}); else if (web2spa.post_back) history.back();
               if (typeof onpost === 'function') onpost(reply.data);
@@ -432,17 +626,11 @@ Form.prototype = {
 /* end form class */
 
 //======================================
-/*** log Helper  ***/
-function log() { console.log.apply(console, arguments); }
-/*** run Helpers, using: run(function), if no arguments; run.call(function, arguments...) instead. Method 'apply' pass arguments as collection ***/
-function run() { if (this === window) { if (typeof arguments[0] === 'function') arguments[0](); } else if (typeof this === 'function') this.apply(window, arguments); }
-function run_hE(f, El, event) { if (typeof f === 'function') f.call(El, event); }
-//======================================
 /*** String Helpers  ***/
 String.prototype.escapeHTML = function() { return this.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\"/g,'&quot;'); }
 String.prototype.unescapeHTML = function() { return this.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"'); }
 String.prototype.clearSlashes = function() { return this.replace(/\/$/, '').replace(/^\//, ''); }
-String.prototype.normPath = function() { return this.replace(/\/{2,}/g, '/'); }
+String.prototype.normPath = function() { return this.replace(/\/{2,}/g, '/'); } // remove multi-slashes
 String.prototype.format = function() {	// or use javascript embedded expression format: `string1${arg1}string2${arg2}string3`
     var newStr = this, i = 0;
     while (/%s/.test(newStr)) newStr = newStr.replace("%s", arguments[i++]);
@@ -470,36 +658,6 @@ String.prototype.frontZero = function(count) {
     var newStr = this;
     while (newStr.length < count) newStr = '0' + newStr;
     return newStr;
-}
-//======================================
-/*** Prototype: CheckBox, performs set/get data to/from localStorage ***/
-    /* constructor, usage: var flag = new CheckBox(id, hC);
-    id -checkbox id
-    hC - checkbox click event handler
-    */
-function CheckBox(name, hC) {
-    this.name = name;
-    this.id = '#' + name;
-    this.value = (localStorage[name] == 'true');
-    this.init(hC);
-}
-CheckBox.prototype = {
-    init: function(hC, runonce) {
-        this.handler = hC;
-        var self = this;
-        this.El = $(this.id);
-        this.El.prop('checked', this.value).off();
-        if (hC) {
-            this.El.click(function() { self.click(this.checked); });
-            if (runonce) this.click(this.value);
-        }
-    },
-    click: function(checked) {
-        localStorage[this.name] = checked;
-        this.value = checked;
-        run.call(this.handler, checked);
-    },
-    reset_handler: function() { this.handler = null; }
 }
 //==========================================================
 /* Set caret position easily in jQuery. Written by and Copyright of Luke Morton, 2011. Licensed under MIT */
